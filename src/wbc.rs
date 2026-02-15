@@ -19,6 +19,34 @@
 //   - Key Ratcheting: Each txn uses a different table (Moving Target Defense)
 //   - Canary Tables: Decoys that flag automated extraction attempts
 //   - 24h TTL: Tables expire, limiting extraction window
+//
+// ┌─────────────────────────────────────────────────────────────────────┐
+// │  KOTLIN DEVELOPER GUIDE                                            │
+// │                                                                     │
+// │  JNI FUNCTIONS:                                                    │
+// │  ─────────────                                                     │
+// │  external fun nativeProvisionMagazine(keySeed: ByteArray,          │
+// │      deviceHash: ByteArray, envelopeKey: ByteArray): String        │
+// │  external fun nativeRemainingTables(): Int                         │
+// │  external fun nativeEncryptMagazine(): ByteArray                   │
+// │  external fun nativeDecryptMagazine(data: ByteArray): Boolean      │
+// │                                                                     │
+// │  STORAGE (SQLite):                                                 │
+// │  ─────────────────                                                 │
+// │  CREATE TABLE wbc_magazine (                                       │
+// │      id             INTEGER PRIMARY KEY DEFAULT 1,                 │
+// │      encrypted_data BLOB NOT NULL,  -- AES-256-GCM encrypted       │
+// │      current_index  INTEGER DEFAULT 0,                             │
+// │      total_tables   INTEGER DEFAULT 50,                            │
+// │      provisioned_at INTEGER NOT NULL  -- Unix timestamp            │
+// │  );                                                                │
+// │                                                                     │
+// │  KOTLIN UI:                                                        │
+// │  ──────────                                                        │
+// │  Show remaining tables as a "battery" indicator:                   │
+// │    val remaining = nativeRemainingTables()                         │
+// │    if (remaining < 5) showWarning("Connect online to refresh")    │
+// └─────────────────────────────────────────────────────────────────────┘
 
 use aes_gcm::{
     aead::{Aead, KeyInit, OsRng},

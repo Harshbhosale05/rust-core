@@ -18,6 +18,37 @@
 //
 //   In production, this would use Shamir's Secret Sharing with threshold (2,2)
 //   or a proper two-party ECDSA/EdDSA protocol (e.g., GG18 or FROST).
+//
+// ┌─────────────────────────────────────────────────────────────────────┐
+// │  KOTLIN DEVELOPER GUIDE                                            │
+// │                                                                     │
+// │  BLE FLOW FOR MPC:                                                 │
+// │  ─────────────────                                                 │
+// │  PAYER APP:                                                        │
+// │    1. val partialSig = nativeGeneratePartialSig(shareA, payload)   │
+// │    2. Send partialSig bytes to Merchant via BLE GATT write         │
+// │                                                                     │
+// │  MERCHANT APP:                                                     │
+// │    3. Receive partialSig from BLE characteristic                   │
+// │    4. val fullSig = nativeCombineAndSign(partialSig, shareB,       │
+// │         payload)                                                   │
+// │    5. Verify with nativeVerifyCombined(fullSig, payload)           │
+// │                                                                     │
+// │  JNI FUNCTIONS:                                                    │
+// │  ─────────────                                                     │
+// │  external fun nativeSplitKey(seed: ByteArray): String // JSON      │
+// │  external fun nativeGeneratePartialSig(shareJson: String,          │
+// │      payload: ByteArray): ByteArray                                │
+// │  external fun nativeCombineAndSign(partialSig: ByteArray,          │
+// │      shareAJson: String, shareBJson: String,                       │
+// │      payload: ByteArray): String                                   │
+// │                                                                     │
+// │  SHARE STORAGE (Android Keystore):                                 │
+// │  ─────────────────────────────────                                 │
+// │  - Share A: Store in Android Keystore, alias "asparsh_share_a"     │
+// │  - Share B: Received from Merchant via BLE, held in memory only    │
+// │  - NEVER persist Share B to disk on Payer's device                 │
+// └─────────────────────────────────────────────────────────────────────┘
 
 use ed25519_dalek::{SigningKey, Signer, Verifier, VerifyingKey, Signature};
 use rand::rngs::OsRng;

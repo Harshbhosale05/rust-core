@@ -12,6 +12,34 @@
 // TWICE via different code paths. If a hacker uses fault injection (laser/voltage
 // glitch) to corrupt one path, the mismatch triggers an instant panic, starving
 // the attacker of the faulty ciphertext needed for DFA key extraction.
+//
+// ┌─────────────────────────────────────────────────────────────────────┐
+// │  KOTLIN DEVELOPER GUIDE                                            │
+// │                                                                     │
+// │  JNI FUNCTIONS:                                                    │
+// │  ─────────────                                                     │
+// │  external fun nativeGenerateKeypair(): ByteArray  // 32-byte pubkey│
+// │  external fun nativeSignPayload(data: ByteArray): ByteArray        │
+// │  external fun nativeVerifySignature(pubKey: ByteArray,             │
+// │      data: ByteArray, sig: ByteArray): Boolean                     │
+// │  external fun nativeGenerateNonce(): ByteArray  // 32 bytes        │
+// │  external fun nativeDeviceBinding(androidId: String,               │
+// │      fingerprint: String, hwId: String): ByteArray                 │
+// │                                                                     │
+// │  KEY STORAGE (Android Keystore):                                   │
+// │  ───────────────────────────────                                   │
+// │  - Store Ed25519 seed in Android Keystore (TEE-backed)             │
+// │  - Never expose raw key bytes to Kotlin layer                      │
+// │  - Use Keystore alias: "asparsh_signing_key"                       │
+// │                                                                     │
+// │  NONCE LIFECYCLE (BLE flow):                                       │
+// │  ──────────────────────────                                        │
+// │  1. Merchant app: val nonce = nativeGenerateNonce()                │
+// │  2. Send nonce to Payer via BLE characteristic                     │
+// │  3. Payer embeds nonce in TransactionPayload                       │
+// │  4. Merchant verifies nonce matches on receipt                     │
+// │  5. Nonce is single-use — discard after verification               │
+// └─────────────────────────────────────────────────────────────────────┘
 
 use ed25519_dalek::{Signer, SigningKey, Verifier, VerifyingKey, Signature};
 use rand::rngs::OsRng;
