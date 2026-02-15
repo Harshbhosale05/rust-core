@@ -1,0 +1,48 @@
+[package]
+name = "asparsh-core"
+version = "0.1.0"
+edition = "2021"
+description = "A-SPARSH Software-Defined Secure Element (SD-SE) - Offline CBDC Engine"
+
+[lib]
+name = "asparsh_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Cryptography
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+sha2 = "0.10"
+hmac = "0.12"
+aes-gcm = "0.10"
+rand = "0.8"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+prost = "0.13"
+
+# Secure memory handling
+zeroize = { version = "1", features = ["derive"] }
+
+# JNI bridge (for Android NDK)
+jni = "0.21"
+
+# Hex encoding for token IDs
+hex = "0.4"
+
+# Timestamps
+chrono = { version = "0.4", features = ["serde"] }
+
+[build-dependencies]
+prost-build = "0.13"
+
+[dev-dependencies]
+# For testing
+tokio = { version = "1", features = ["full"] }
+
+[profile.release]
+opt-level = "z"      # Optimize for size (mobile)
+lto = true           # Link-time optimization
+strip = true         # Strip debug symbols
+codegen-units = 1    # Maximum optimization

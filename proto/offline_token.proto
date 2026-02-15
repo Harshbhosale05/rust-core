@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package asparsh;
+
+// A single offline e-Rupee token (digital note/coin)
+message OfflineToken {
+  string token_id = 1;                // Unique RBI-issued identifier (e.g., "eR-10-XYZ789")
+  uint32 denomination_inr = 2;        // Face value in INR (1, 2, 5, 10, 20, 50, 100, 500)
+  bytes  rbi_signature = 3;           // Ed25519 signature from RBI over (token_id + denomination)
+  bytes  hardware_keyblob = 4;        // TEE-encrypted single-use key
+  uint64 expiry_timestamp = 5;        // Unix epoch — 24h TTL for WBC tables
+  uint32 tee_binding_index = 6;       // Monotonic counter index at provisioning time
+  string status = 7;                  // UNSPENT / PENDING / SPENT
+  bytes  chain_history = 8;           // Compressed ownership chain (A → B → C)
+}
+
+// Full payment payload sent Payer → Merchant over BLE
+message TransactionPayload {
+  string tx_id = 1;                   // Unique transaction identifier
+  repeated OfflineToken tokens = 2;   // Selected tokens being spent
+  uint32 total_amount = 3;            // Sum of denominations
+  bytes  session_nonce = 4;           // 256-bit nonce from Merchant
+  bytes  payer_partial_sig = 5;       // Share-A partial signature (MPC)
+  bytes  merkle_root = 6;             // Merkle root of all token hashes
+  uint64 counter_state = 7;           // Payer's TEE monotonic counter value
+  string payer_device_id = 8;         // Hardware-bound device fingerprint
+  uint64 timestamp = 9;              // Transaction creation timestamp
+}
+
+// Merchant acknowledgement sent back to Payer over BLE
+message TransactionAck {
+  string tx_id = 1;                   // Must match TransactionPayload.tx_id
+  bytes  merchant_share_b_sig = 2;    // Share-B partial signature (MPC)
+  bytes  combined_full_sig = 3;       // Combined Ed25519 full signature
+  repeated OfflineToken change_tokens = 4;  // Bidirectional change (if overpayment)
+  string merchant_device_id = 5;      // Merchant hardware fingerprint
+  uint64 timestamp = 6;
+}
+
+// Gossip sync payload — uploaded when device reconnects to internet
+message GossipSyncPayload {
+  string device_id = 1;
+  repeated TransactionPayload sent_txns = 2;
+  repeated TransactionAck received_acks = 3;
+  uint64 current_counter = 4;
+  uint64 sync_timestamp = 5;
+}
+
+// Server response after Gossip sync
+message SyncResponse {
+  bool   success = 1;
+  repeated string flagged_token_ids = 2;    // Tokens detected as double-spent
+  repeated string blacklisted_devices = 3;  // Devices to add to local blacklist
+  repeated OfflineToken refreshed_tokens = 4; // Fresh tokens after tearable token reconciliation
+}
